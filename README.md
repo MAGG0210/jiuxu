@@ -1,4 +1,4 @@
-# 云笔记 (notes_app)
+# 久序 (notes_app)
 
 一个基于 **Flutter + Supabase** 的跨端云笔记应用：邮箱登录、云端备份、多端实时同步。
 
