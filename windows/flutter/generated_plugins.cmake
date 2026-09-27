@@ -27,3 +27,4 @@ foreach(ffi_plugin ${FLUTTER_FFI_PLUGIN_LIST})
   list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${ffi_plugin}_bundled_libraries})
 endforeach(ffi_plugin)
 
+

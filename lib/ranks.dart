@@ -36,3 +36,4 @@ int daysToNextRank(int days) {
   return next == null ? 0 : next.$1 - days;
 }
 
+

@@ -287,3 +287,4 @@ void Win32Window::UpdateTheme(HWND const window) {
   }
 }
 
+

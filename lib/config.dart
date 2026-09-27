@@ -4,3 +4,4 @@ class SupabaseConfig {
   static const String anonKey = 'sb_publishable_IBTBaHzh-xMxh-yvBFzqjA_Gh4MKUZv';
 }
 
+

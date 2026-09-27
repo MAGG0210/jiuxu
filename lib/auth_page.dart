@@ -457,3 +457,4 @@ class _BatPainter extends CustomPainter {
   bool shouldRepaint(covariant _BatPainter old) => old.alpha != alpha;
 }
 
+

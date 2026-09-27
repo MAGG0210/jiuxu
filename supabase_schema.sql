@@ -271,3 +271,4 @@ end;
 $$;
 grant execute on function public.delete_my_account_data() to authenticated;
 
+
