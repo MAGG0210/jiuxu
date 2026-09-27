@@ -46,3 +46,13 @@ app.*.map.json
 
 # 构建产物 APK（大文件不入库）
 *.apk
+
+# 构建/调试日志（.txt 后缀，上面的 *.log 规则覆盖不到）
+build_*log.txt
+
+# 图标预览图、DevTools 本地配置（机器相关，无共享价值）
+k_icon_preview.png
+devtools_options.yaml
+
+# VS Code 本地设置（含本机绝对路径）
+.vscode/

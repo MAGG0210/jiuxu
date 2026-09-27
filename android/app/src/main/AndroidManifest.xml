@@ -2,7 +2,7 @@
     <!-- 网络访问权限: release 版必须显式声明, 否则无法联网(报 SocketException) -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="云笔记"
+        android:label="久序"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

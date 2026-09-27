@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'note_service.dart';
 import 'note_edit_page.dart';
-import 'trash_page.dart';
-import 'account_page.dart';
-import 'theme_store.dart';
 import 'app_theme.dart';
 
 /// 笔记列表页：Realtime 订阅任何端的变化，实时刷新。
@@ -27,6 +25,9 @@ class _NotesPageState extends State<NotesPage> {
   String _search = '';
   String? _activeTag;
 
+  /// 视图模式：宫格（默认）/ 列表
+  bool _gridView = true;
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +45,11 @@ class _NotesPageState extends State<NotesPage> {
 
   Future<void> _load() async {
     try {
-      final notes = await NoteService.instance.fetchNotes();
+      var notes = await NoteService.instance.fetchNotes();
+      // 首次打开：自动生成一条默认欢迎笔记（只做一次）
+      if (notes.isEmpty && await _seedWelcomeNoteIfNeeded()) {
+        notes = await NoteService.instance.fetchNotes();
+      }
       if (mounted) {
         setState(() {
           _notes = notes;
@@ -67,6 +72,31 @@ class _NotesPageState extends State<NotesPage> {
     }
   }
 
+  static const String _welcomeFlagKey = 'welcome_note_created_v1';
+
+  /// 首次使用写入欢迎笔记；已写过则返回 false
+  Future<bool> _seedWelcomeNoteIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_welcomeFlagKey) == true) return false;
+    await prefs.setBool(_welcomeFlagKey, true);
+    try {
+      await NoteService.instance.createNote(
+        title: '欢迎来到久序',
+        content: '这里是你自己的小宇宙 👑\n\n'
+            '· 笔记：右下角 + 新建，支持 Markdown、标签、置顶、回收站\n'
+            '· 待办：给每件事设一个提醒时间，到点会弹窗提醒你\n'
+            '· 打卡：内置 3 条习惯，坚持打卡可以看到连续天数\n'
+            '· 聊天室 / 社区：登录后可以与人交流、分享见闻\n\n'
+            '按自己的节奏来就好 —— 停下来吧，你本该成为王。\n',
+        tags: ['开始'],
+        pinned: true,
+      );
+      return true;
+    } catch (_) {
+      return false; // 创建失败不影响使用
+    }
+  }
+
   void _subscribe() {
     final uid = NoteService.instance.userId;
     _channel = NoteService.instance.subscribeNotes(
@@ -79,26 +109,7 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 
-  Future<void> _signOut() async {
-    await NoteService.instance.signOut();
-  }
-
-  Future<void> _openTrash() async {
-    await Navigator.push<void>(
-      context,
-      MaterialPageRoute(builder: (_) => const TrashPage()),
-    );
-    // 从回收站返回后刷新（可能恢复了笔记）
-    _load();
-  }
-
-  Future<void> _openAccount() async {
-    await Navigator.push<void>(
-      context,
-      MaterialPageRoute(builder: (_) => const AccountPage()),
-    );
-  }
-
+  // ---------- 文本处理 ----------
   /// 将 Markdown 内容简化为纯文本摘要
   String _stripMarkdown(String s) {
     return s
@@ -148,7 +159,7 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Future<void> _exportNote(Map<String, dynamic> note) async {
-    final title = (note['title'] ?? '云笔记').toString();
+    final title = (note['title'] ?? '久序').toString();
     final text = _noteToText(note);
     await Share.share(text, subject: title);
   }
@@ -179,37 +190,11 @@ class _NotesPageState extends State<NotesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('云笔记'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sync),
-            tooltip: '手动刷新',
-            onPressed: _load,
-          ),
-          PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'logout') _signOut();
-              if (v == 'trash') _openTrash();
-              if (v == 'account') _openAccount();
-              if (v == 'theme_light') ThemeStore.set(ThemeMode.light);
-              if (v == 'theme_dark') ThemeStore.set(ThemeMode.dark);
-              if (v == 'theme_system') ThemeStore.set(ThemeMode.system);
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'account', child: Text('账户')),
-              PopupMenuItem(value: 'theme_light', child: Text('外观：亮色')),
-              PopupMenuItem(value: 'theme_dark', child: Text('外观：暗色')),
-              PopupMenuItem(value: 'theme_system', child: Text('外观：跟随系统')),
-              PopupMenuDivider(),
-              PopupMenuItem(value: 'trash', child: Text('回收站')),
-              PopupMenuDivider(),
-              PopupMenuItem(value: 'logout', child: Text('退出登录')),
-            ],
-          ),
-        ],
-      ),
+      // 页面标题由主壳顶部栏居中显示（左上角头像 / 右上角王室图标之间）
       floatingActionButton: FloatingActionButton(
+        // 唯一 heroTag：IndexedStack 里同时存在多个 FAB，共用默认 tag 会让
+        // 任何页面跳转在 Hero 过渡阶段抛异常（表现为"点了没反应"）
+        heroTag: 'notes-fab',
         onPressed: () async {
           final changed = await Navigator.push<bool>(
             context,
@@ -239,29 +224,72 @@ class _NotesPageState extends State<NotesPage> {
       ),
       body: Column(
         children: [
-          // 搜索框
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              controller: _searchCtrl,
-              decoration: InputDecoration(
-                hintText: '搜索笔记…',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _search.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() => _search = '');
-                        },
-                      ),
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
+          // 游客模式提示条：明确告知不会同步到云端
+          if (NoteService.isGuest)
+            Container(
+              width: double.infinity,
+              color: Colors.orange.withValues(alpha: 0.12),
+              padding: const EdgeInsets.fromLTRB(16, 4, 6, 4),
+              child: Row(
+                children: [
+                  Icon(Icons.cloud_off,
+                      size: 14, color: Colors.orange.shade700),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '游客模式 · 数据只存本机，未开启云备份',
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.orange.shade800),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => NoteService.instance.exitGuestMode(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 28),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('去登录', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
               ),
-              onChanged: (v) => setState(() => _search = v),
+            ),
+          // 搜索框 + 宫格/列表视图切换
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 6, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    decoration: InputDecoration(
+                      hintText: '搜索笔记…',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _search.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                setState(() => _search = '');
+                              },
+                            ),
+                      isDense: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    onChanged: (v) => setState(() => _search = v),
+                  ),
+                ),
+                IconButton(
+                  tooltip: _gridView ? '切换为列表视图' : '切换为宫格视图',
+                  onPressed: () => setState(() => _gridView = !_gridView),
+                  icon: Icon(_gridView
+                      ? Icons.view_list_rounded
+                      : Icons.grid_view_rounded),
+                ),
+              ],
             ),
           ),
           // 标签筛选栏
@@ -349,10 +377,107 @@ class _NotesPageState extends State<NotesPage> {
     }
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: notes.length,
-        itemBuilder: (context, i) => _buildNoteCard(notes[i]),
+      child: _gridView
+          ? GridView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 90),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.78,
+              ),
+              itemCount: notes.length,
+              itemBuilder: (context, i) => _buildNoteGridCard(notes[i]),
+            )
+          : ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: notes.length,
+              itemBuilder: (context, i) => _buildNoteCard(notes[i]),
+            ),
+    );
+  }
+
+  /// 宫格卡片（默认视图）：标题 + 摘要 + 标签 + 时间
+  Widget _buildNoteGridCard(Map<String, dynamic> note) {
+    final title = (note['title'] ?? '无标题').toString();
+    final content = _stripMarkdown((note['content'] ?? '').toString());
+    final updated = _formatTime(note['updated_at']?.toString());
+    final pinned = note['pinned'] == true;
+    final tags = (note['tags'] as List?)?.map((e) => e.toString()) ?? const [];
+    final scheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () async {
+        final changed = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => NoteEditPage(note: note)),
+        );
+        if (changed == true) _load();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: AppColors.gradientSoft,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: scheme.primary.withValues(alpha: 0.12)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (pinned) ...[
+                  Icon(Icons.push_pin, size: 14, color: Colors.orange.shade700),
+                  const SizedBox(width: 4),
+                ],
+                Expanded(
+                  child: Text(title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: Text(
+                content.isEmpty ? '（空笔记）' : content,
+                maxLines: 6,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: scheme.onSurface.withValues(alpha: 0.65)),
+              ),
+            ),
+            if (tags.isNotEmpty)
+              Wrap(
+                spacing: 4,
+                runSpacing: 2,
+                children: tags
+                    .take(3)
+                    .map((t) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: scheme.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text('#$t',
+                              style: TextStyle(
+                                  fontSize: 10, color: scheme.primary)),
+                        ))
+                    .toList(),
+              ),
+            const SizedBox(height: 4),
+            Text(updated,
+                style:
+                    TextStyle(fontSize: 10.5, color: Colors.grey.shade500)),
+          ],
+        ),
       ),
     );
   }

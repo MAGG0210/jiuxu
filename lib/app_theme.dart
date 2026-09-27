@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// 云笔记品牌视觉体系
+/// 王殿品牌视觉体系
 /// 设计语言：Apple Design Awards 风格 —— 柔和渐变 + 玻璃质感 + 极简卡片
 /// 配色：暖白书写背景 + 青蓝→靛蓝品牌渐变
 class AppColors {

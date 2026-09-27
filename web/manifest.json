@@ -1,11 +1,11 @@
 {
-    "name": "notes_app",
-    "short_name": "notes_app",
+    "name": "久序",
+    "short_name": "久序",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F5F5F2",
+    "theme_color": "#F5F5F2",
+    "description": "K 云笔记",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

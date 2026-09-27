@@ -52,7 +52,7 @@ supabase_schema.sql      Supabase 建表 + RLS 策略 + Realtime + 触发器 SQL
 ### 1. 搭建 Supabase 后端
 
 1. 在 [Supabase](https://supabase.com) 创建项目。
-2. 打开 **SQL Editor**，执行根目录的 [`supabase_schema.sql`](supabase_schema.sql)（建表、索引、RLS 策略、Realtime、`updated_at` 触发器）。
+2. 打开 **SQL Editor**，执行根目录的 [`supabase_schema.sql`](supabase_schema.sql)（完整建表、索引、RLS、Realtime、签到 RPC、社区与账号数据清理函数）。可重复执行；不会删除已有待办数据。
 3. 在 **Authentication → Providers** 确认 Email 登录已开启。
 
 ### 2. 配置客户端
@@ -72,6 +72,11 @@ class SupabaseConfig {
 flutter pub get
 flutter run          # 选择目标设备（Android / Web / Windows）
 ```
+
+## 图标工具
+
+`tools/make_icon.py <source-image> [output-image]` 可去除白底并裁剪图标主体；默认输出到 `assets/k_icon_clean.png`。
+`python tools/gen_app_icons.py [source-image]` 将单张源图生成 Android、Windows、Web 图标；默认使用 `assets/k_icon_clean.png`。两个脚本均需 Pillow（PIL）。
 
 ## 安全说明
 
