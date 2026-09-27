@@ -395,3 +395,4 @@ class _SettingsPageState extends State<SettingsPage> {
                     .withValues(alpha: 0.9))),
       );
 }
+

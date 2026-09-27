@@ -139,3 +139,4 @@ class LocalNotes {
     await prefs.remove(_key);
   }
 }
+

@@ -208,3 +208,4 @@ class _TrashPageState extends State<TrashPage> {
     );
   }
 }
+

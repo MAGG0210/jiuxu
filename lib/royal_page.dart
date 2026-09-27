@@ -253,3 +253,4 @@ class _RoyalPageState extends State<RoyalPage> {
     );
   }
 }
+

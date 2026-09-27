@@ -82,3 +82,4 @@ void main() {
     expect((await LocalNotes.fetchTrash()).length, 0);
   });
 }
+

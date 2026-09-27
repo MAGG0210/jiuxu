@@ -289,3 +289,4 @@ class NoteService {
     return channel;
   }
 }
+

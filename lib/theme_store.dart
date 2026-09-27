@@ -28,3 +28,4 @@ class ThemeStore {
     await prefs.setString(_key, mode.name);
   }
 }
+

@@ -594,3 +594,4 @@ class UserAvatar extends StatelessWidget {
     return GestureDetector(onTap: onTap, child: content);
   }
 }
+

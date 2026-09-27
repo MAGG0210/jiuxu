@@ -256,3 +256,4 @@ class TodoStore {
   static int get pendingCount =>
       notifier.value.where((t) => t['done'] != true).length;
 }
+
